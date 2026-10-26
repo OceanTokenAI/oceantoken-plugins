@@ -210,7 +210,10 @@ they finish. Failed jobs are not charged.
 ## Privacy and terms
 
 Prompts and files go to the model you choose, through OceanToken, to produce your result.
-Generated files are stored in your OceanToken storage and shared as time-limited links. See the
+Generated files are stored in your OceanToken storage and shared as time-limited links.
+Besides the MCP server at `https://mcp.oceantoken.ai/mcp`, the setup skill calls OceanToken's own API at
+`https://api.oceantoken.ai` with your `OCEANTOKEN_API_KEY`, only to check the key and to configure your tools
+to use it. No other service receives data from this plugin. See the
 [privacy policy](https://app.oceantoken.ai/legal/privacy) and [terms](https://app.oceantoken.ai/legal/terms).
 
 ## Support
