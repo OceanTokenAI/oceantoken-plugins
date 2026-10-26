@@ -10,6 +10,9 @@
   "repository": "https://github.com/OceanTokenAI/oceantoken-plugins",
   "license": "MIT",
   "privacyPolicyUrl": "https://oceantoken.ai/privacy",
+  "termsOfServiceUrl": "https://oceantoken.ai/terms",
+  "supportUrl": "mailto:support@oceantoken.ai",
+  "documentationUrl": "https://docs.oceantoken.ai",
   "keywords": [
     "oceantoken",
     "models",
