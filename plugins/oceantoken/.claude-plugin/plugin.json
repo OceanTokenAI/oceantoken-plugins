@@ -9,6 +9,7 @@
   "homepage": "https://oceantoken.ai",
   "repository": "https://github.com/OceanTokenAI/oceantoken-plugins",
   "license": "MIT",
+  "privacyPolicyUrl": "https://oceantoken.ai/privacy",
   "keywords": [
     "oceantoken",
     "models",
