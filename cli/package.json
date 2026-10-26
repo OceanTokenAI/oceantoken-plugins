@@ -1,0 +1,52 @@
+{
+  "name": "@oceantoken/cli",
+  "version": "0.2.3",
+  "description": "Connect Codex, Claude Code, Cursor, Gemini CLI, OpenClaw, OpenCode, VS Code, WorkBuddy, Hermes Agent or Windsurf to OceanToken (500+ AI models, one account) in one command, or run Codex and Claude Code on OceanToken models.",
+  "type": "module",
+  "bin": {
+    "oceantoken": "bin/oceantoken.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "prepack": "node scripts/sync-skills.mjs"
+  },
+  "homepage": "https://oceantoken.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OceanTokenAI/oceantoken-plugins.git",
+    "directory": "cli"
+  },
+  "bugs": "https://github.com/OceanTokenAI/oceantoken-plugins/issues",
+  "license": "MIT",
+  "author": "OceanToken <support@oceantoken.ai>",
+  "keywords": [
+    "oceantoken",
+    "mcp",
+    "codex",
+    "claude-code",
+    "cursor",
+    "gemini-cli",
+    "openclaw",
+    "opencode",
+    "vscode",
+    "workbuddy",
+    "hermes",
+    "windsurf",
+    "ai-agents",
+    "image-generation",
+    "video-generation"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

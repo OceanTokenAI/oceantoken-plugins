@@ -1,0 +1,19 @@
+{
+  "id": "oceantoken",
+  "name": "OceanToken",
+  "description": "One OceanToken account for 500+ AI models. Search models and prices, estimate costs, and generate images, video, speech and text.",
+  "version": "0.2.1",
+  "categories": ["media"],
+  "skills": ["./skills"],
+  "mcpServers": {
+    "oceantoken": {
+      "url": "https://mcp.oceantoken.ai/mcp",
+      "transport": "streamable-http"
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

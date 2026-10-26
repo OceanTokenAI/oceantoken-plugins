@@ -1,0 +1,30 @@
+{
+  "name": "oceantoken",
+  "owner": {
+    "name": "OceanToken",
+    "url": "https://oceantoken.ai"
+  },
+  "metadata": {
+    "description": "OceanToken for Claude Code: 500+ AI models (LLM, image, video, speech) with one account.",
+    "version": "0.2.1"
+  },
+  "plugins": [
+    {
+      "name": "oceantoken",
+      "source": "./plugins/oceantoken",
+      "description": "Search 500+ models and their prices, estimate costs, and generate images, video, speech and text with your OceanToken balance.",
+      "version": "0.2.1",
+      "category": "productivity",
+      "homepage": "https://oceantoken.ai",
+      "keywords": [
+        "oceantoken",
+        "image generation",
+        "video generation",
+        "text to speech",
+        "llm",
+        "model router",
+        "mcp"
+      ]
+    }
+  ]
+}

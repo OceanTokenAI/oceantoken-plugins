@@ -1,0 +1,15 @@
+{
+  "name": "@oceantoken/oceantoken",
+  "version": "0.2.1",
+  "private": true,
+  "type": "module",
+  "description": "OceanToken plugin: 500+ AI models (LLM, image, video, speech) with one account, as skills and an MCP server.",
+  "homepage": "https://oceantoken.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OceanTokenAI/oceantoken-plugins.git",
+    "directory": "plugins/oceantoken"
+  },
+  "license": "MIT",
+  "author": "OceanToken <support@oceantoken.ai>"
+}

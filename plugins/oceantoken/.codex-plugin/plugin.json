@@ -1,0 +1,46 @@
+{
+  "name": "oceantoken",
+  "version": "0.2.1",
+  "description": "One OceanToken account for 500+ AI models. Search and compare models and prices, estimate costs before you spend, and generate images, video, speech and text without leaving Codex.",
+  "author": {
+    "name": "OceanToken",
+    "url": "https://oceantoken.ai"
+  },
+  "homepage": "https://oceantoken.ai",
+  "repository": "https://github.com/OceanTokenAI/oceantoken-plugins",
+  "license": "MIT",
+  "keywords": [
+    "oceantoken",
+    "models",
+    "image generation",
+    "video generation",
+    "text to speech",
+    "transcription",
+    "llm",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "OceanToken",
+    "shortDescription": "500+ AI models, one account",
+    "longDescription": "OceanToken puts 500+ models in Codex behind one account and one balance: GPT, Claude, Gemini, DeepSeek and Qwen for text; GPT Image, Seedream, Recraft and Gemini for images; Seedance, Veo, Sora and Wan for video; plus text-to-speech and transcription.\n\nSearch the catalog by type, capability and price, see what a model accepts, and get a cost estimate before anything runs, including a balance check. Then generate: images with previews, video jobs you can poll, voice-overs, subtitles, or a one-shot answer from another model when a cheaper or different model fits the task better. Results come back as download links your project can save directly.\n\nConnect with your OceanToken email and password, or an API key. New to OceanToken? Create an account at app.oceantoken.ai.",
+    "developerName": "OceanToken",
+    "category": "Creativity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://oceantoken.ai",
+    "privacyPolicyURL": "https://app.oceantoken.ai/legal/privacy",
+    "termsOfServiceURL": "https://app.oceantoken.ai/legal/terms",
+    "supportURL": "https://github.com/OceanTokenAI/oceantoken-plugins/issues",
+    "defaultPrompt": [
+      "Find the cheapest video model that does 1080p with audio and estimate a 10-second clip",
+      "Generate a 16:9 hero image for this landing page and save it to public/hero.png",
+      "Ask a cheaper model to review this diff, then compare its review with yours"
+    ],
+    "brandColor": "#003D66",
+    "logo": "./assets/logo.png",
+    "composerIcon": "./assets/icon.png"
+  }
+}

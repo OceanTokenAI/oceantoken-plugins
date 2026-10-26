@@ -1,0 +1,20 @@
+{
+  "name": "oceantoken",
+  "interface": {
+    "displayName": "OceanToken"
+  },
+  "plugins": [
+    {
+      "name": "oceantoken",
+      "source": {
+        "source": "local",
+        "path": "./plugins/oceantoken"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Creativity"
+    }
+  ]
+}

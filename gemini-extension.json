@@ -1,0 +1,11 @@
+{
+  "name": "oceantoken",
+  "version": "0.2.1",
+  "description": "One OceanToken account for 500+ AI models: search models and prices, estimate costs, and generate images, video, speech and text.",
+  "mcpServers": {
+    "oceantoken": {
+      "httpUrl": "https://mcp.oceantoken.ai/mcp"
+    }
+  },
+  "contextFileName": "GEMINI.md"
+}

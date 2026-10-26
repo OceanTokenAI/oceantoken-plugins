@@ -1,0 +1,35 @@
+{
+  "name": "oceantoken",
+  "displayName": "OceanToken",
+  "version": "0.2.1",
+  "description": "Search 500+ models and their prices, estimate costs, and generate images, video, speech and text with one account.",
+  "author": {
+    "name": "OceanToken",
+    "email": "support@oceantoken.ai"
+  },
+  "homepage": "https://oceantoken.ai",
+  "repository": "https://github.com/OceanTokenAI/oceantoken-plugins",
+  "license": "MIT",
+  "logo": "assets/logo.png",
+  "keywords": [
+    "oceantoken",
+    "image-generation",
+    "video-generation",
+    "text-to-speech",
+    "transcription",
+    "llm",
+    "models",
+    "mcp"
+  ],
+  "category": "integrations",
+  "tags": [
+    "oceantoken",
+    "images",
+    "video",
+    "speech",
+    "models",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}
