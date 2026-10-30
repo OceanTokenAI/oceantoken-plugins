@@ -2,13 +2,21 @@ name: CLI tests
 
 # The tests also check that the READMEs and INSTALL.md describe the CLI as it is.
 on:
+  # push only on main: a pull request's branch is already tested by the pull_request run, and pushing
+  # to it used to start both (2026-10-30).
   push:
+    branches: [main]
     paths: ["cli/**", "plugins/oceantoken/skills/**", "plugins/oceantoken/README.md", "README.md", "INSTALL.md", "GEMINI.md", ".github/workflows/cli.yml"]
   pull_request:
     paths: ["cli/**", "plugins/oceantoken/skills/**", "plugins/oceantoken/README.md", "README.md", "INSTALL.md", "GEMINI.md", ".github/workflows/cli.yml"]
 
 permissions:
   contents: read
+
+concurrency:
+  # A newer push to the same pull request replaces the run still going; main is never cancelled.
+  group: cli-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
@@ -21,6 +29,8 @@ jobs:
           - os: macos-latest
             node: "22"
     runs-on: ${{ matrix.os }}
+    # A run takes well under a minute; a hung npm test stops here, not at the 6-hour default.
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: cli
