@@ -15,6 +15,9 @@ export const CLAUDE_DEFAULT_MODELS = {
 // apiKeyHelper's output is sent as the key; Claude Code runs it in a shell.
 const ENV_KEY_HELPER = `printenv ${KEY_ENV}`;
 
+// Claude Code reads its settings when a session starts; an IDE keeps its session open until the window reloads.
+const RESTART = "start a new Claude Code session (VS Code or Cursor: run Developer: Reload Window)";
+
 const claudeSettings = (ctx) => `${ctx.env.CLAUDE_CONFIG_DIR || ctx.path(".claude")}/settings.json`;
 
 export function authText(ctx) {
@@ -74,7 +77,7 @@ export async function claudeUse(ctx) {
   ctx.report.model = ctx.model ?? "Opus / Sonnet / Haiku → the latest Claude models on OceanToken";
   ctx.report.authIn = authText(ctx);
   ctx.report.backup = `${file}.bak-oceantoken; previous values in ${stateFile(ctx.home)}`;
-  ctx.report.restart = "start a new Claude Code session (in the desktop app or IDE, reload it)";
+  ctx.report.restart = RESTART;
   ctx.next("Claude Code now bills your OceanToken balance instead of your Claude plan. Undo with `unuse claude-code`.");
   if (ctx.useEnvKey) ctx.next(`Claude Code reads the key from ${KEY_ENV} through apiKeyHelper: export it in your shell profile.`);
 }
@@ -112,5 +115,5 @@ export async function claudeUnuse(ctx) {
     const { "claude-code": _gone, ...rest } = state;
     writeState(ctx.home, rest);
   }
-  ctx.report.restart = "start a new Claude Code session";
+  ctx.report.restart = RESTART;
 }

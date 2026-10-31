@@ -57,4 +57,12 @@ export default {
   unuse: codexUnuse,
   /** The key an earlier `use codex` stored, so a rerun needs none pasted. */
   savedKey: (ctx) => codexProviderKey(readIfExists(configFile(ctx))),
+  /** What Codex runs on now, for `status`. */
+  runsOn: (ctx) => {
+    const text = readIfExists(configFile(ctx)) ?? "";
+    if (/^\s*model_provider\s*=\s*"oceantoken"/m.test(text)) {
+      return { oceantoken: true, detail: (/^\s*model\s*=\s*"([^"]+)"/m.exec(text) || [])[1] || "OceanToken" };
+    }
+    return { oceantoken: false, detail: "its own sign-in (your ChatGPT plan)" };
+  },
 };
