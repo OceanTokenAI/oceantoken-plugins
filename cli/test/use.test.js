@@ -191,3 +191,67 @@ test("codex: the ChatGPT app rewrote config.toml and lost the end markers; unuse
   const parked = '# disabled by @oceantoken/cli: model_provider = "oceantoken"\nmodel = "x"\n';
   assert.equal(revertCodexProvider(parked).text, 'model = "x"\n');
 });
+
+// Board 2026-10-30: people switch between their own plan and OceanToken often, so the
+// key `use` was given is kept for switching back, and `status` says where each agent is.
+test("switching back and forth: unuse keeps the key (owner-only), use needs none pasted, --forget-key deletes it", async () => {
+  const home = tempHome();
+  const file = path.join(home, ".claude", "settings.json");
+  fs.mkdirSync(path.dirname(file));
+  fs.writeFileSync(file, `${JSON.stringify({ theme: "dark" })}\n`);
+  const stateFile = path.join(home, ".oceantoken", "cli-state.json");
+
+  assert.equal((await cli(["use", "claude-code", "--api-key", KEY], { home })).code, 0);
+  assert.equal(readJson(stateFile).keys["claude-code"], KEY);
+  assert.equal(fs.statSync(stateFile).mode & 0o777, 0o600, "the kept key is owner-only");
+
+  const off = await cli(["unuse", "claude-code"], { home });
+  assert.equal(off.code, 0, off.out);
+  assert.deepEqual(readJson(file), { theme: "dark" }, "the user's settings are back exactly");
+  assert.match(off.out, /Key {7}kept in /);
+  assert.match(off.out, /Back {6}npx -y @oceantoken\/cli@latest use claude-code/);
+  assert.match(off.out, /Developer: Reload Window/);
+
+  // No --api-key, no terminal to paste into: the kept key is used.
+  const on = await cli(["use", "claude-code"], { home });
+  assert.equal(on.code, 0, on.out);
+  assert.match(on.out, /kept from your last `use claude-code`/);
+  assert.equal(readJson(file).env.ANTHROPIC_AUTH_TOKEN, KEY);
+  assert.ok(!on.out.includes(KEY) && !off.out.includes(KEY), "the key is never printed");
+
+  const forget = await cli(["unuse", "claude-code", "--forget-key"], { home });
+  assert.equal(forget.code, 0, forget.out);
+  assert.match(forget.out, /Key {7}deleted/);
+  assert.equal(readJson(stateFile).keys, undefined);
+  const again = await cli(["use", "claude-code"], { home });
+  assert.equal(again.code, 2, "nothing kept: a key is needed again");
+  assert.match(again.err, /no API key/);
+});
+
+test("a kept key OceanToken rejects is dropped; --use-env-key keeps nothing", async () => {
+  const home = tempHome();
+  await cli(["use", "claude-code", "--api-key", KEY], { home });
+  await cli(["unuse", "claude-code"], { home });
+  const rejected = await cli(["use", "claude-code"], { home, models: 401 });
+  assert.equal(rejected.code, 1, rejected.out);
+  assert.equal(readJson(path.join(home, ".oceantoken", "cli-state.json")).keys, undefined);
+
+  const envHome = tempHome();
+  await cli(["use", "claude-code", "--use-env-key"], { home: envHome, env: { OCEANTOKEN_API_KEY: KEY } });
+  assert.ok(!exists(path.join(envHome, ".oceantoken", "cli-state.json")) || !read(path.join(envHome, ".oceantoken", "cli-state.json")).includes(KEY));
+});
+
+test("status says what Claude Code and Codex run on now", async () => {
+  const home = tempHome();
+  const before = await cli(["status"], { home });
+  assert.equal(before.code, 0, before.err);
+  assert.match(before.out, /claude-code +not OceanToken - its own sign-in \(your Claude plan\)/);
+  assert.match(before.out, /codex +not OceanToken - its own sign-in \(your ChatGPT plan\)/);
+
+  await cli(["use", "claude-code", "--api-key", KEY], { home });
+  await cli(["use", "codex", "--api-key", KEY], { home });
+  const after = await cli(["status", "--json"], { home });
+  const rows = JSON.parse(after.out);
+  assert.deepEqual(rows.map((r) => [r.agent, r.oceantoken, r.keyKept]), [["codex", true, true], ["claude-code", true, true]].filter((r) => rows.some((x) => x.agent === r[0])).sort((a, b) => rows.findIndex((x) => x.agent === a[0]) - rows.findIndex((x) => x.agent === b[0])));
+  assert.ok(!after.out.includes(KEY), "status never prints a key");
+});

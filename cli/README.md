@@ -35,13 +35,39 @@ npx -y @oceantoken/cli@latest use codex                    # GPT-5.5 through Oce
 npx -y @oceantoken/cli@latest use codex --move-chats       # ...and your existing chats too
 npx -y @oceantoken/cli@latest use codex --model deepseek/deepseek-v4-pro
 npx -y @oceantoken/cli@latest use claude-code              # Opus/Sonnet/Haiku through OceanToken
-npx -y @oceantoken/cli@latest unuse codex                  # back to how it was
+npx -y @oceantoken/cli@latest unuse claude-code           # back to your Claude plan
+npx -y @oceantoken/cli@latest status                       # what each agent runs on now
 ```
+
+### Switching back and forth
+
+Ran out of your Claude or ChatGPT plan's usage? `use` moves the agent to OceanToken;
+when the plan resets, `unuse` moves it back. The key is kept, so the next `use` needs
+none pasted:
+
+```sh
+npx -y @oceantoken/cli@latest use claude-code      # on OceanToken
+npx -y @oceantoken/cli@latest unuse claude-code    # back to your Claude plan
+npx -y @oceantoken/cli@latest use claude-code      # on OceanToken again, no key to paste
+npx -y @oceantoken/cli@latest unuse claude-code --forget-key   # back, and delete the kept key
+```
+
+An agent reads these settings when a session starts: start a new session after each
+switch. In VS Code or Cursor, run **Developer: Reload Window**. The Claude desktop app
+keeps its own sign-in.
+
+Your Claude Code chats come with you both ways. A chat that ran on OceanToken can hold a
+field your Claude plan refuses (`tool_use.provider_specific_fields: Extra inputs are not
+permitted`), so `unuse claude-code` takes it out of every chat under `~/.claude/projects`,
+after copying each chat it changes to `~/.claude/backups/oceantoken-cli-<UTC time>/`. Then
+reload the window and reopen the chat from the past conversations (in a terminal,
+`claude --continue`), and carry on where you left off. `unuse` does this even when the
+gateway was set up by hand, so it is also the fix for a chat that already shows that error.
 
 | Agent | What `use` changes | What `unuse` does |
 |---|---|---|
 | Codex | `~/.codex/config.toml`: top-level `model_provider` / `model` and a `[model_providers.oceantoken]` table (Responses API). Your own `model =` line is commented out, not deleted. A model list for Codex's picker (`~/.codex/oceantoken-models.json`, named by `model_catalog_json`) with OceanToken's ids (`openai/gpt-6-luna`), built from your own Codex's list. Unless `--no-tools`: the OceanToken tools (an `[mcp_servers.oceantoken]` table with the same key, or the plugin if `connect codex` installed it), the skills in `~/.agents/skills`, and a short note in `~/.codex/AGENTS.md` that sends image, video and audio requests to those tools | Removes both blocks and uncomments your lines; removes the model list, and the tools, skills and note `use` added (not what `connect` added) |
-| Claude Code | `~/.claude/settings.json` → `env`: `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, the Opus/Sonnet/Haiku model mapping (`ANTHROPIC_MODEL` with `--model`) | Puts back every value it replaced (saved in `~/.oceantoken/cli-state.json`) |
+| Claude Code | `~/.claude/settings.json` → `env`: `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, the Opus/Sonnet/Haiku model mapping (`ANTHROPIC_MODEL` with `--model`) | Puts back every value it replaced (saved in `~/.oceantoken/cli-state.json`); readies your chats for your Claude plan (see above) |
 
 Codex refuses to start while `model_catalog_json` names a file that is missing or broken,
 so leave `~/.codex/oceantoken-models.json` in place while `use` is on (`unuse` removes the
@@ -72,7 +98,9 @@ Without `--move-chats`, `use` and `unuse` say how many chats stay behind and, in
 terminal, offer to move them (the default is no).
 
 Without `--api-key`, `use` opens the API keys page and asks you to paste a key (hidden);
-a later `use codex` reuses the key the first one saved.
+a later `use` reuses the key the first one saved, also after `unuse` (it is kept,
+owner-only, in `~/.oceantoken/cli-state.json`; `unuse --forget-key` deletes it, and a key
+OceanToken rejects is dropped).
 `--use-env-key` keeps the key out of the files: Codex reads `OCEANTOKEN_API_KEY` itself,
 Claude Code through `apiKeyHelper`. Every file is backed up before it is changed (see
 [What it changes](#what-it-changes)), and a file that holds a key is made owner-only.
@@ -99,6 +127,9 @@ Options for use
                       back to your ChatGPT plan). Quit Codex first; a backup is made
   --no-tools          Codex: do not add OceanToken's image/video/speech tools and skills
   --url, --no-skills, --dry-run, --json   As for connect
+
+Options for unuse
+  --forget-key        Also delete the API key use kept for switching back
 
 Other options
   -h, --help          Show this help

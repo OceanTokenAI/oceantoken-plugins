@@ -8,6 +8,7 @@ import { createContext } from "./context.js";
 import { apiBaseFor, mcpUrlFor, resolveApiKey, serverReachable, verifyApiKey } from "./lib/apikey.js";
 import { openUrl, promptHidden, promptYesNo } from "./lib/prompt.js";
 import { redact, run as realRun } from "./lib/run.js";
+import { forgetKey, keepKey, keptKey, keptKeyFile } from "./lib/kept-keys.js";
 
 const { version: VERSION } = createRequire(import.meta.url)("../package.json");
 
@@ -19,6 +20,7 @@ export const OPTIONS = {
   "no-skills": { type: "boolean", default: false },
   "no-tools": { type: "boolean", default: false },
   "move-chats": { type: "boolean", default: false },
+  "forget-key": { type: "boolean", default: false },
   "dry-run": { type: "boolean", default: false },
   json: { type: "boolean", default: false },
   url: { type: "string" },
@@ -35,11 +37,14 @@ Usage
   npx -y @oceantoken/cli@latest disconnect <client>
   npx -y @oceantoken/cli@latest clients
   npx -y @oceantoken/cli@latest use <codex|claude-code> [--model <id>]
-  npx -y @oceantoken/cli@latest unuse <codex|claude-code>
+  npx -y @oceantoken/cli@latest unuse <codex|claude-code> [--forget-key]
+  npx -y @oceantoken/cli@latest status
 
 connect adds OceanToken's tools (image, video, speech, 500+ models) to your agent.
 use makes OceanToken the model provider the agent itself runs on, billed to your
-OceanToken balance (for Codex it also adds the tools); unuse puts the previous setup back.
+OceanToken balance (for Codex it also adds the tools); unuse puts the previous setup back
+(your ChatGPT or Claude plan). The key is kept, so use again switches back without
+pasting it. status shows what each agent runs on now.
 
 Clients
 ${CLIENTS.map((c) => `  ${c.id.padEnd(12)} ${c.label}`).join("\n")}
@@ -63,6 +68,9 @@ Options for use
                       back to your ChatGPT plan). Quit Codex first; a backup is made
   --no-tools          Codex: do not add OceanToken's image/video/speech tools and skills
   --url, --no-skills, --dry-run, --json   As for connect
+
+Options for unuse
+  --forget-key        Also delete the API key use kept for switching back
 
 Other options
   -h, --help          Show this help
@@ -155,6 +163,21 @@ export async function main(argv = process.argv.slice(2), deps = {}) {
     return switchProvider(command, clientName, values, { base, deps, print, printErr, env });
   }
 
+  if (command === "status") {
+    const ctx = { env, home: base.home, path: (...p) => path.join(base.home, ...p) };
+    const rows = CLIENTS.filter((c) => c.runsOn).map((c) => ({ agent: c.id, label: c.label, ...c.runsOn(ctx), keyKept: Boolean(keptKey(base.home, c.id)) }));
+    if (values.json) {
+      print(JSON.stringify(rows, null, 2));
+      return 0;
+    }
+    print("What each agent runs on");
+    for (const r of rows) print(`  ${r.agent.padEnd(12)} ${r.oceantoken ? "OceanToken" : "not OceanToken"} - ${r.detail}`);
+    print("");
+    print("Switch: npx -y @oceantoken/cli@latest use <agent>   Back: npx -y @oceantoken/cli@latest unuse <agent>");
+    print("Then start a new session of the agent (VS Code or Cursor: run Developer: Reload Window).");
+    return 0;
+  }
+
   if (command !== "connect" && command !== "disconnect") {
     printErr(`Unknown command "${command}".\n\n${HELP}`);
     return 2;
@@ -235,11 +258,16 @@ const USE_CLIENTS = () => CLIENTS.filter((c) => c.use).map((c) => c.id);
 /** The key for `use`: a flag, the environment, the key an earlier `use` stored, or pasted. */
 async function keyForUse(client, values, { base, env, deps, print }) {
   const fromFlags = await resolveApiKey({ flag: values["api-key"], useEnv: values["use-env-key"], env });
-  if (fromFlags) return fromFlags;
+  if (fromFlags) return { key: fromFlags, kept: false };
   const saved = client.savedKey?.({ env, path: (...p) => path.join(base.home, ...p) });
   if (saved) {
     print("Using the API key an earlier `use` saved in the config.");
-    return saved;
+    return { key: saved, kept: false };
+  }
+  const kept = keptKey(base.home, client.id);
+  if (kept) {
+    print(`Using the API key kept from your last \`use ${client.id}\` (unuse ${client.id} --forget-key deletes it).`);
+    return { key: kept, kept: true };
   }
   const interactive = deps.promptKey ?? (process.stdin.isTTY && process.stdout.isTTY ? promptHidden : null);
   if (!interactive) {
@@ -248,7 +276,7 @@ async function keyForUse(client, values, { base, env, deps, print }) {
   const keys = keysUrl(client.id);
   print(`Opening ${keys} - create a key there (no account yet? ${signupUrl(client.id)}).`);
   await openUrl(keys, deps.runner ?? realRun);
-  return resolveApiKey({ flag: await interactive("Paste your OceanToken API key (sk-...): ") });
+  return { key: await resolveApiKey({ flag: await interactive("Paste your OceanToken API key (sk-...): ") }), kept: false };
 }
 
 async function switchProvider(command, clientName, values, { base, deps, print, printErr, env }) {
@@ -258,9 +286,10 @@ async function switchProvider(command, clientName, values, { base, deps, print, 
     return 2;
   }
   let apiKey = null;
+  let fromKept = false;
   if (command === "use") {
     try {
-      apiKey = await keyForUse(client, values, { base, env, deps, print });
+      ({ key: apiKey, kept: fromKept } = await keyForUse(client, values, { base, env, deps, print }));
     } catch (err) {
       printErr(`Error: ${err.message}. Create a key at ${keysUrl(client.id)}`);
       return 2;
@@ -293,13 +322,19 @@ async function switchProvider(command, clientName, values, { base, deps, print, 
       const verdict = await verifyApiKey(apiKey, { apiBase: ctx.apiBase, fetchImpl });
       if (verdict === "rejected") {
         ctx.step("API key", "failed", "rejected by OceanToken (wrong, revoked or expired)");
+        // A kept key that stopped working is not offered again.
+        if (fromKept && !ctx.dryRun) forgetKey(base.home, client.id);
         ctx.next(`Create or copy a key at ${keysUrl(client.id)} and run this again.`);
       } else {
         ctx.step("API key", verdict === "valid" ? "ok" : "manual", verdict === "valid" ? "accepted" : "could not be checked; continuing");
         await client.use(ctx, { fetchImpl });
+        // Kept for switching back after unuse; not with --use-env-key (the key stays in the environment).
+        if (!ctx.dryRun && !values["use-env-key"] && !ctx.report.steps.some((s) => s.status === "failed")) keepKey(base.home, client.id, apiKey);
       }
     } else {
       await client.unuse(ctx, { fetchImpl });
+      if (values["forget-key"] && !ctx.dryRun) ctx.report.keyKept = forgetKey(base.home, client.id) ? "deleted" : "none kept";
+      else ctx.report.keyKept = keptKey(base.home, client.id) ? `kept in ${keptKeyFile(base.home)}` : "none kept";
     }
   } catch (err) {
     ctx.step("Error", "failed", redact(err?.message ?? String(err), apiKey ? [apiKey] : []));
@@ -326,8 +361,11 @@ async function switchProvider(command, clientName, values, { base, deps, print, 
         : [
             ["Agent", report.label],
             ...(client.id === "codex" ? [["Chats", report.chats ?? "not moved"]] : []),
+            ...(client.id === "claude-code" && report.chats ? [["Chats", report.chats]] : []),
             ...(report.backup ? [["Backup", report.backup]] : []),
             ["Restart", report.restart ?? "–"],
+            ["Key", report.keyKept ?? "–"],
+            ["Back", `npx -y @oceantoken/cli@latest use ${client.id}`],
             ["Result", report.result],
           ];
     print("");

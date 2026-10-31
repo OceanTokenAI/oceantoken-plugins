@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { DEFAULT_MCP_URL, MARKETPLACE, PLUGIN_ID, PLUGIN_REPO, SERVER_NAME } from "../constants.js";
-import { exists } from "../lib/fsutil.js";
+import { exists, readIfExists } from "../lib/fsutil.js";
 import { signInInApp } from "./common.js";
 import { claudeUnuse, claudeUse } from "./provider-switch.js";
 
@@ -13,6 +13,17 @@ function claudeJson(ctx) {
   return path.join(ctx.env.CLAUDE_CONFIG_DIR || ctx.home, ".claude.json");
 }
 const PLUGIN_SERVER = `plugin:${MARKETPLACE}:${SERVER_NAME}`;
+
+/** The env block of ~/.claude/settings.json, where `use claude-code` points Claude Code at OceanToken. */
+function settingsEnv(ctx) {
+  try {
+    const env = JSON.parse(readIfExists(path.join(claudeDir(ctx), "settings.json")) ?? "{}").env;
+    return env && typeof env === "object" && !Array.isArray(env) ? env : {};
+  } catch {
+    return {};
+  }
+}
+const onOceanToken = (env) => /oceantoken/i.test(String(env.ANTHROPIC_BASE_URL ?? ""));
 const INSTALL =
   "Install Claude Code first: npm install -g @anthropic-ai/claude-code, the Claude desktop app, or the Claude Code extension for VS Code or Cursor.";
 
@@ -49,12 +60,13 @@ export function findClaude(ctx) {
       : process.platform === "win32"
         ? path.join(appData, "Claude", "claude-code")
         : path.join(ctx.env.XDG_CONFIG_HOME || ctx.path(".config"), "Claude", "claude-code");
+  const inDir = (dir) =>
+    process.platform === "darwin" ? path.join(dir, "claude.app", "Contents", "MacOS", "claude") : path.join(dir, exe);
   for (const version of listDir(desktop)) {
-    const file =
-      process.platform === "darwin"
-        ? path.join(desktop, version, "claude.app", "Contents", "MacOS", "claude")
-        : path.join(desktop, version, exe);
-    if (exists(file)) found.push({ file, version });
+    // <version>/claude.app, or since 2.1.30x <version>/<build>/claude.app
+    const dirs = [path.join(desktop, version), ...listDir(path.join(desktop, version)).map((b) => path.join(desktop, version, b))];
+    const file = dirs.map(inDir).find(exists);
+    if (file) found.push({ file, version });
   }
 
   for (const ide of [".cursor", ".vscode", ".vscode-insiders", ".windsurf", ".vscode-oss"]) {
@@ -158,4 +170,16 @@ export default {
 
   use: claudeUse,
   unuse: claudeUnuse,
+  /** The key a `use claude-code` in force stored, so a rerun needs none pasted. */
+  savedKey: (ctx) => {
+    const env = settingsEnv(ctx);
+    return onOceanToken(env) && typeof env.ANTHROPIC_AUTH_TOKEN === "string" ? env.ANTHROPIC_AUTH_TOKEN : null;
+  },
+  /** What Claude Code runs on now, for `status`. */
+  runsOn: (ctx) => {
+    const env = settingsEnv(ctx);
+    if (onOceanToken(env)) return { oceantoken: true, detail: env.ANTHROPIC_MODEL || "Claude models on OceanToken" };
+    if (env.ANTHROPIC_BASE_URL || env.ANTHROPIC_AUTH_TOKEN || env.ANTHROPIC_API_KEY) return { oceantoken: false, detail: "another gateway or API key (settings.json env)" };
+    return { oceantoken: false, detail: "its own sign-in (your Claude plan)" };
+  },
 };
