@@ -60,12 +60,13 @@ export function findClaude(ctx) {
       : process.platform === "win32"
         ? path.join(appData, "Claude", "claude-code")
         : path.join(ctx.env.XDG_CONFIG_HOME || ctx.path(".config"), "Claude", "claude-code");
+  const inDir = (dir) =>
+    process.platform === "darwin" ? path.join(dir, "claude.app", "Contents", "MacOS", "claude") : path.join(dir, exe);
   for (const version of listDir(desktop)) {
-    const file =
-      process.platform === "darwin"
-        ? path.join(desktop, version, "claude.app", "Contents", "MacOS", "claude")
-        : path.join(desktop, version, exe);
-    if (exists(file)) found.push({ file, version });
+    // <version>/claude.app, or since 2.1.30x <version>/<build>/claude.app
+    const dirs = [path.join(desktop, version), ...listDir(path.join(desktop, version)).map((b) => path.join(desktop, version, b))];
+    const file = dirs.map(inDir).find(exists);
+    if (file) found.push({ file, version });
   }
 
   for (const ide of [".cursor", ".vscode", ".vscode-insiders", ".windsurf", ".vscode-oss"]) {

@@ -56,10 +56,18 @@ An agent reads these settings when a session starts: start a new session after e
 switch. In VS Code or Cursor, run **Developer: Reload Window**. The Claude desktop app
 keeps its own sign-in.
 
+Your Claude Code chats come with you both ways. A chat that ran on OceanToken can hold a
+field your Claude plan refuses (`tool_use.provider_specific_fields: Extra inputs are not
+permitted`), so `unuse claude-code` takes it out of every chat under `~/.claude/projects`,
+after copying each chat it changes to `~/.claude/backups/oceantoken-cli-<UTC time>/`. Then
+reload the window and reopen the chat from the past conversations (in a terminal,
+`claude --continue`), and carry on where you left off. `unuse` does this even when the
+gateway was set up by hand, so it is also the fix for a chat that already shows that error.
+
 | Agent | What `use` changes | What `unuse` does |
 |---|---|---|
 | Codex | `~/.codex/config.toml`: top-level `model_provider` / `model` and a `[model_providers.oceantoken]` table (Responses API). Your own `model =` line is commented out, not deleted. A model list for Codex's picker (`~/.codex/oceantoken-models.json`, named by `model_catalog_json`) with OceanToken's ids (`openai/gpt-6-luna`), built from your own Codex's list. Unless `--no-tools`: the OceanToken tools (an `[mcp_servers.oceantoken]` table with the same key, or the plugin if `connect codex` installed it), the skills in `~/.agents/skills`, and a short note in `~/.codex/AGENTS.md` that sends image, video and audio requests to those tools | Removes both blocks and uncomments your lines; removes the model list, and the tools, skills and note `use` added (not what `connect` added) |
-| Claude Code | `~/.claude/settings.json` → `env`: `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, the Opus/Sonnet/Haiku model mapping (`ANTHROPIC_MODEL` with `--model`) | Puts back every value it replaced (saved in `~/.oceantoken/cli-state.json`) |
+| Claude Code | `~/.claude/settings.json` → `env`: `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, the Opus/Sonnet/Haiku model mapping (`ANTHROPIC_MODEL` with `--model`) | Puts back every value it replaced (saved in `~/.oceantoken/cli-state.json`); readies your chats for your Claude plan (see above) |
 
 Codex refuses to start while `model_catalog_json` names a file that is missing or broken,
 so leave `~/.codex/oceantoken-models.json` in place while `use` is on (`unuse` removes the

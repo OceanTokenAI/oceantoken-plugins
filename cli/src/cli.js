@@ -361,6 +361,7 @@ async function switchProvider(command, clientName, values, { base, deps, print, 
         : [
             ["Agent", report.label],
             ...(client.id === "codex" ? [["Chats", report.chats ?? "not moved"]] : []),
+            ...(client.id === "claude-code" && report.chats ? [["Chats", report.chats]] : []),
             ...(report.backup ? [["Backup", report.backup]] : []),
             ["Restart", report.restart ?? "–"],
             ["Key", report.keyKept ?? "–"],

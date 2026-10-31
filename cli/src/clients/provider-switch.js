@@ -1,4 +1,7 @@
+import path from "node:path";
 import { KEY_ENV } from "../constants.js";
+import { cleanChats } from "../lib/claude-chats.js";
+import { exists } from "../lib/fsutil.js";
 import { editJsonObject } from "../lib/json-config.js";
 import { readState, stateFile, writeState } from "../lib/state.js";
 
@@ -17,8 +20,48 @@ const ENV_KEY_HELPER = `printenv ${KEY_ENV}`;
 
 // Claude Code reads its settings when a session starts; an IDE keeps its session open until the window reloads.
 const RESTART = "start a new Claude Code session (VS Code or Cursor: run Developer: Reload Window)";
+// A chat open in Claude Code keeps its history in memory, so it is reopened from disk after unuse cleans it.
+const RESTART_BACK =
+  "VS Code or Cursor: run Developer: Reload Window, then reopen your chat from the past conversations; terminal: start claude again (claude --continue picks up the last chat)";
 
-const claudeSettings = (ctx) => `${ctx.env.CLAUDE_CONFIG_DIR || ctx.path(".claude")}/settings.json`;
+const claudeDir = (ctx) => ctx.env.CLAUDE_CONFIG_DIR || ctx.path(".claude");
+const claudeSettings = (ctx) => `${claudeDir(ctx)}/settings.json`;
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const stamp = () => new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+
+/** A new backup folder: <claude dir>/backups/oceantoken-cli-<UTC time>, never one that exists. */
+function backupDir(ctx) {
+  const base = path.join(claudeDir(ctx), "backups", `oceantoken-cli-${stamp()}`);
+  for (let n = 1; ; n++) {
+    const dir = n === 1 ? base : `${base}-${n}`;
+    if (!exists(dir)) return dir;
+  }
+}
+
+/**
+ * Chats that ran on OceanToken carry a field Anthropic refuses (see claude-chats.js), so
+ * a chat continued on the user's own plan would fail; take it out, backups first.
+ */
+function cleanClaudeChats(ctx) {
+  const dir = ctx.dryRun ? null : backupDir(ctx);
+  const found = cleanChats(claudeDir(ctx), { backupDir: dir });
+  if (!found.length) {
+    ctx.step("Chats", "ok", "nothing to clean");
+    ctx.report.chats = "ready for your Claude plan";
+    return;
+  }
+  const blocks = found.reduce((n, c) => n + c.blocks, 0);
+  const chats = new Set(found.map((c) => c.chat)).size;
+  const what = `${plural(chats, "chat")} (${plural(blocks, "tool call")} with a field your Claude plan refuses)`;
+  if (ctx.dryRun) {
+    ctx.step("Chats", "skipped", `would clean ${what}, backup first`);
+    ctx.report.chats = `would clean ${what}`;
+    return;
+  }
+  ctx.step("Chats", "ok", `cleaned ${what}; backup in ${dir}`);
+  ctx.report.chats = `${plural(chats, "chat")} cleaned, so they continue on your Claude plan`;
+  ctx.report.backup = [ctx.report.backup, dir].filter(Boolean).join("; ");
+}
 
 export function authText(ctx) {
   return ctx.useEnvKey ? `the ${KEY_ENV} environment variable` : "an API key saved in the config (owner-only file)";
@@ -86,6 +129,9 @@ export async function claudeUnuse(ctx) {
   const file = claudeSettings(ctx);
   const state = readState(ctx.home);
   const saved = state["claude-code"]?.previous;
+  // Also without an earlier `use`: chats from a gateway set up by hand fail the same way.
+  cleanClaudeChats(ctx);
+  ctx.report.restart = RESTART_BACK;
   if (!saved) {
     ctx.step("Model provider", "skipped", "nothing to undo (no earlier `use claude-code` on this machine)");
     return;
@@ -115,5 +161,4 @@ export async function claudeUnuse(ctx) {
     const { "claude-code": _gone, ...rest } = state;
     writeState(ctx.home, rest);
   }
-  ctx.report.restart = RESTART;
 }
